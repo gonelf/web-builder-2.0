@@ -242,7 +242,7 @@ export default function BuilderPreview() {
       // 3. Stitch HTML locally (zero LLM tokens spent here)
       setStatus('Stitching components...');
       const isDark = /dark/i.test(prompt);
-      const stitchedHtml = stitchHtml(ids, isDark);
+      const stitchedHtml = stitchHtml(ids); // always stitch light — Gemini handles copy on original classes
 
       // 4. Ask Gemini to rewrite the copy to match the user's prompt
       setStatus('Writing copy...');
@@ -251,7 +251,9 @@ export default function BuilderPreview() {
       );
       const rawCopy = copyResult.response.text().trim();
       // Strip accidental markdown code fences if present
-      const finalHtml = rawCopy.replace(/^```(?:html)?\n?/i, '').replace(/\n?```$/, '');
+      const copiedHtml = rawCopy.replace(/^```(?:html)?\n?/i, '').replace(/\n?```$/, '');
+      // Apply dark theme AFTER Gemini so it can never revert the class swap
+      const finalHtml = isDark ? applyDarkTheme(copiedHtml) : copiedHtml;
 
       // 5. Hot-write to WebContainer then force iframe reload
       await wcRef.current.fs.writeFile('/index.html', finalHtml);

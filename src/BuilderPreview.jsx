@@ -81,16 +81,23 @@ ${sections}
 
 // ---------------------------------------------------------------------------
 // WebContainer file system setup
+// Uses a zero-dependency Node.js HTTP server to avoid npm install
 // ---------------------------------------------------------------------------
 const WC_FILES = {
-  'package.json': {
+  'server.mjs': {
     file: {
-      contents: JSON.stringify({
-        name: 'preview-server',
-        type: 'module',
-        dependencies: { vite: 'latest' },
-        scripts: { dev: 'vite --host --port 3000' },
-      }),
+      contents: `
+import http from 'http';
+import fs from 'fs';
+
+const server = http.createServer((_req, res) => {
+  const html = fs.readFileSync('index.html', 'utf8');
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.end(html);
+});
+
+server.listen(3000, () => console.log('Server ready on port 3000'));
+`.trim(),
     },
   },
   'index.html': {
@@ -128,18 +135,10 @@ export default function BuilderPreview() {
         setStatus('Mounting file system...');
         await wc.mount(WC_FILES);
 
-        setStatus('Installing dependencies (vite)...');
-        const install = await wc.spawn('npm', ['install']);
-        install.output.pipeTo(
-          new WritableStream({ write: (chunk) => console.log('[npm]', chunk) })
-        );
-        const installCode = await install.exit;
-        if (installCode !== 0) throw new Error('npm install failed');
-
-        setStatus('Starting dev server...');
-        const server = await wc.spawn('npm', ['run', 'dev']);
+        setStatus('Starting preview server...');
+        const server = await wc.spawn('node', ['server.mjs']);
         server.output.pipeTo(
-          new WritableStream({ write: (chunk) => console.log('[vite]', chunk) })
+          new WritableStream({ write: (chunk) => console.log('[server]', chunk) })
         );
 
         wc.on('server-ready', (_port, url) => {

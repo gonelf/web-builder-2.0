@@ -28,6 +28,18 @@ EXAMPLE OUTPUT
 blueprint[5]: nav-1, hero-split, stats-3col, pricing-tiers, footer-social
 `;
 
+const copywriterSystemInstruction = `
+You are a COPYWRITER. You receive raw HTML for a landing page and a user prompt describing what the page is for.
+Your job is to replace ALL placeholder/lorem-ipsum text with real, compelling copy that fits the product described.
+
+CONSTRAINTS
+- Return ONLY the full updated HTML. No explanations, no markdown fences, no commentary.
+- Keep ALL HTML structure, Tailwind classes, and attributes exactly as-is. Only change visible text content.
+- Replace every instance of placeholder text (lorem ipsum, "Raw Denim", "Shooting Stars", generic filler, etc.).
+- Brand name, taglines, feature names, pricing plan names, nav links, footer links — everything should reflect the product.
+- Write in a professional, modern SaaS tone. Be concise and benefit-focused.
+`;
+
 // ---------------------------------------------------------------------------
 // TOON parser
 // ---------------------------------------------------------------------------
@@ -204,9 +216,18 @@ export default function BuilderPreview() {
 
       // 3. Stitch HTML locally (zero LLM tokens spent here)
       setStatus('Stitching components...');
-      const finalHtml = stitchHtml(ids);
+      const stitchedHtml = stitchHtml(ids);
 
-      // 4. Hot-write to WebContainer then force iframe reload
+      // 4. Ask Gemini to rewrite the copy to match the user's prompt
+      setStatus('Writing copy...');
+      const copyResult = await model.generateContent(
+        `${copywriterSystemInstruction}\n\nUser prompt: ${prompt}\n\nHTML:\n${stitchedHtml}`
+      );
+      const rawCopy = copyResult.response.text().trim();
+      // Strip accidental markdown code fences if present
+      const finalHtml = rawCopy.replace(/^```(?:html)?\n?/i, '').replace(/\n?```$/, '');
+
+      // 5. Hot-write to WebContainer then force iframe reload
       await wcRef.current.fs.writeFile('/index.html', finalHtml);
       setPreviewKey(k => k + 1);
       setStatus(`Built with ${ids.length} components`);
@@ -270,7 +291,7 @@ export default function BuilderPreview() {
             transition: 'background 0.15s',
           }}
         >
-          {isBuilding ? 'Architecting...' : 'Build Page'}
+          {isBuilding ? (status.startsWith('Writing') ? 'Writing copy...' : 'Architecting...') : 'Build Page'}
         </button>
       </form>
 

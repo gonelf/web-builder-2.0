@@ -118,8 +118,8 @@ export default function BuilderPreview() {
   const [status, setStatus] = useState('Booting WebContainer...');
   const [blueprint, setBlueprint] = useState(null); // { toon, ids }
   const [error, setError] = useState('');
+  const [iframeKey, setIframeKey] = useState(0);
   const wcRef = useRef(null);
-  const iframeRef = useRef(null);
 
   // ── Boot the WebContainer on mount ──────────────────────────────────────
   useEffect(() => {
@@ -192,9 +192,9 @@ export default function BuilderPreview() {
       setStatus('Stitching components...');
       const finalHtml = stitchHtml(ids);
 
-      // 4. Hot-write to WebContainer then reload the iframe to fetch new content
+      // 4. Hot-write to WebContainer then remount the iframe to fetch new content
       await wcRef.current.fs.writeFile('/index.html', finalHtml);
-      if (iframeRef.current) iframeRef.current.contentWindow.location.reload();
+      setIframeKey((k) => k + 1);
       setStatus(`Built with ${ids.length} components`);
     } catch (err) {
       console.error('[Build]', err);
@@ -292,7 +292,7 @@ export default function BuilderPreview() {
         )}
         {iframeUrl && (
           <iframe
-            ref={iframeRef}
+            key={iframeKey}
             src={iframeUrl}
             title="Live Preview"
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}

@@ -28,6 +28,18 @@ EXAMPLE OUTPUT
 blueprint[5]: nav-1, hero-split, stats-3col, pricing-tiers, footer-social
 `;
 
+const copywriterSystemInstruction = `
+You are a COPYWRITER. You receive raw HTML for a landing page and a user prompt describing what the page is for.
+Your job is to replace ALL placeholder/lorem-ipsum text with real, compelling copy that fits the product described.
+
+CONSTRAINTS
+- Return ONLY the full updated HTML. No explanations, no markdown fences, no commentary.
+- Keep ALL HTML structure, Tailwind classes, and attributes exactly as-is. Only change visible text content.
+- Replace every instance of placeholder text (lorem ipsum, "Raw Denim", "Shooting Stars", generic filler, etc.).
+- Brand name, taglines, feature names, pricing plan names, nav links, footer links — everything should reflect the product.
+- Write in a professional, modern SaaS tone. Be concise and benefit-focused.
+`;
+
 // ---------------------------------------------------------------------------
 // TOON parser
 // ---------------------------------------------------------------------------
@@ -48,9 +60,32 @@ function parseToonBlueprint(toonStr) {
 }
 
 // ---------------------------------------------------------------------------
+// Dark theme — remap Tailblocks' light Tailwind classes to dark equivalents
+// ---------------------------------------------------------------------------
+const DARK_MAP = [
+  [/\bbg-white\b/g,        'bg-gray-900'],
+  [/\bbg-gray-50\b/g,      'bg-gray-900'],
+  [/\bbg-gray-100\b/g,     'bg-gray-800'],
+  [/\bbg-gray-200\b/g,     'bg-gray-700'],
+  [/\btext-gray-900\b/g,   'text-white'],
+  [/\btext-gray-800\b/g,   'text-gray-100'],
+  [/\btext-gray-700\b/g,   'text-gray-300'],
+  [/\btext-gray-600\b/g,   'text-gray-400'],
+  [/\btext-gray-500\b/g,   'text-gray-400'],
+  [/\bborder-gray-200\b/g, 'border-gray-700'],
+  [/\bborder-gray-300\b/g, 'border-gray-600'],
+];
+
+function applyDarkTheme(html) {
+  let out = html;
+  for (const [from, to] of DARK_MAP) out = out.replace(from, to);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // HTML stitcher — builds a full standalone document from component IDs
 // ---------------------------------------------------------------------------
-function stitchHtml(ids) {
+function stitchHtml(ids, dark = false) {
   const sections = ids
     .map((id) => {
       if (!registry[id]) {
@@ -61,7 +96,8 @@ function stitchHtml(ids) {
     })
     .join('\n');
 
-  return `<!DOCTYPE html>
+  const bodyClass = dark ? 'bg-gray-900' : 'bg-white';
+  const raw = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -71,10 +107,11 @@ function stitchHtml(ids) {
     body { font-family: ui-sans-serif, system-ui, sans-serif; }
   </style>
 </head>
-<body class="bg-white">
+<body class="${bodyClass}">
 ${sections}
 </body>
 </html>`;
+  return dark ? applyDarkTheme(raw) : raw;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,9 +241,21 @@ export default function BuilderPreview() {
 
       // 3. Stitch HTML locally (zero LLM tokens spent here)
       setStatus('Stitching components...');
-      const finalHtml = stitchHtml(ids);
+      const isDark = /dark/i.test(prompt);
+      const stitchedHtml = stitchHtml(ids); // always stitch light — Gemini handles copy on original classes
 
-      // 4. Hot-write to WebContainer then force iframe reload
+      // 4. Ask Gemini to rewrite the copy to match the user's prompt
+      setStatus('Writing copy...');
+      const copyResult = await model.generateContent(
+        `${copywriterSystemInstruction}\n\nUser prompt: ${prompt}\n\nHTML:\n${stitchedHtml}`
+      );
+      const rawCopy = copyResult.response.text().trim();
+      // Strip accidental markdown code fences if present
+      const copiedHtml = rawCopy.replace(/^```(?:html)?\n?/i, '').replace(/\n?```$/, '');
+      // Apply dark theme AFTER Gemini so it can never revert the class swap
+      const finalHtml = isDark ? applyDarkTheme(copiedHtml) : copiedHtml;
+
+      // 5. Hot-write to WebContainer then force iframe reload
       await wcRef.current.fs.writeFile('/index.html', finalHtml);
       setPreviewKey(k => k + 1);
       setStatus(`Built with ${ids.length} components`);
@@ -270,7 +319,7 @@ export default function BuilderPreview() {
             transition: 'background 0.15s',
           }}
         >
-          {isBuilding ? 'Architecting...' : 'Build Page'}
+          {isBuilding ? (status.startsWith('Writing') ? 'Writing copy...' : 'Architecting...') : 'Build Page'}
         </button>
       </form>
 

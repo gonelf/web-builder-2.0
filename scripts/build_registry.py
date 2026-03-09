@@ -12,6 +12,11 @@ Usage:
 
   # Option 3 (default): Use bundled component definitions
   python3 build_registry.py
+
+NOTE: To add/refresh Tailblocks components (mertJF/tailblocks), run:
+  python3 scripts/convert_tailblocks.py
+This fetches JSX from Tailblocks, converts it to static HTML,
+and merges the results into registry.json and menu.toon.
 """
 
 import os

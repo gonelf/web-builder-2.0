@@ -1,4 +1,4 @@
-components[13]{id,category,desc}:
+components[26]{id,category,desc}:
 nav-1,layout,Navbar with logo, nav links, and login/register bu
 hero-split,marketing,Split-screen hero with text left and image right
 stats-3col,marketing,4-column statistics grid with large numbers
@@ -12,3 +12,16 @@ feature-grid,marketing,Feature grid with icons and descriptions
 logo-cloud,marketing,Logo cloud section for trusted brands
 team-section,marketing,Team member cards grid section
 blog-cards,marketing,Blog post cards grid section
+tb-header-a,layout,Tailblocks navbar with logo, nav links, and CTA bu
+tb-hero-a,marketing,Tailblocks split hero: text left, image right
+tb-hero-b,marketing,Tailblocks centered hero with image above text
+tb-feature-a,marketing,Tailblocks 3-column feature section with icons
+tb-pricing-a,marketing,Tailblocks 4-tier pricing table with popular badge
+tb-cta-a,marketing,Tailblocks inline call-to-action with headline and
+tb-stats-a,marketing,Tailblocks 4-stat metrics grid
+tb-testimonial-a,marketing,Tailblocks testimonial section with 2 quote cards
+tb-blog-a,marketing,Tailblocks 3-card blog post grid with meta
+tb-contact-a,application,Tailblocks contact form card over map background
+tb-team-a,marketing,Tailblocks 9-member team grid with avatars
+tb-step-a,marketing,Tailblocks 4-step process timeline with image
+tb-footer-a,layout,Tailblocks multi-column footer with social icons

@@ -1,0 +1,14 @@
+components[13]{id,category,desc}:
+nav-1,layout,Navbar with logo, nav links, and login/register bu
+hero-split,marketing,Split-screen hero with text left and image right
+stats-3col,marketing,4-column statistics grid with large numbers
+cta-dark,marketing,Newsletter signup with email input on gray backgro
+pricing-tiers,marketing,2-tier pricing table with Pro and Starter plans
+faq-accordion,marketing,Accordion-style FAQ using HTML details elements
+footer-social,layout,Large footer with nav links, newsletter, and socia
+contact-form,application,Contact form with name, email, message fields
+hero-center,marketing,Two-column section with text left and image right
+feature-grid,marketing,Feature grid with icons and descriptions
+logo-cloud,marketing,Logo cloud section for trusted brands
+team-section,marketing,Team member cards grid section
+blog-cards,marketing,Blog post cards grid section

@@ -50,7 +50,7 @@ function parseToonBlueprint(toonStr) {
 // ---------------------------------------------------------------------------
 // HTML stitcher — builds a full standalone document from component IDs
 // ---------------------------------------------------------------------------
-function stitchHtml(ids) {
+function stitchHtml(ids, inlineTailwind) {
   const sections = ids
     .map((id) => {
       if (!registry[id]) {
@@ -61,13 +61,19 @@ function stitchHtml(ids) {
     })
     .join('\n');
 
+  // Inline the pre-fetched Tailwind script to avoid COEP/CORP blocking.
+  // The WebContainer iframe inherits require-corp from the parent page,
+  // so external CDN requests are blocked unless they send CORP headers.
+  const tailwindTag = inlineTailwind
+    ? `<script>${inlineTailwind}</script>`
+    : `<script src="https://cdn.tailwindcss.com"></script>`;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  ${tailwindTag}
   <style>
     /* HyperUI uses font-sans; map to system stack */
     body { font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -120,10 +126,18 @@ export default function BuilderPreview() {
   const [error, setError] = useState('');
   const [iframeKey, setIframeKey] = useState(0);
   const wcRef = useRef(null);
+  const tailwindRef = useRef(''); // cached CDN script for inline injection
 
   // ── Boot the WebContainer on mount ──────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+
+    // Pre-fetch Tailwind CDN from parent context (no COEP restriction here)
+    // so we can inline it into the iframe HTML and avoid cross-origin blocking.
+    fetch('https://cdn.tailwindcss.com')
+      .then((r) => r.text())
+      .then((text) => { tailwindRef.current = text; })
+      .catch((e) => console.warn('[Tailwind prefetch]', e));
 
     async function boot() {
       try {
@@ -190,7 +204,7 @@ export default function BuilderPreview() {
 
       // 3. Stitch HTML locally (zero LLM tokens spent here)
       setStatus('Stitching components...');
-      const finalHtml = stitchHtml(ids);
+      const finalHtml = stitchHtml(ids, tailwindRef.current);
 
       // 4. Hot-write to WebContainer then remount the iframe to fetch new content
       await wcRef.current.fs.writeFile('/index.html', finalHtml);

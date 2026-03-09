@@ -66,10 +66,8 @@ function stitchHtml(ids) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/tailwind.css" />
   <style>
-    /* HyperUI uses font-sans; map to system stack */
     body { font-family: ui-sans-serif, system-ui, sans-serif; }
   </style>
 </head>
@@ -89,11 +87,22 @@ const WC_FILES = {
       contents: `
 import http from 'http';
 import fs from 'fs';
+import path from 'path';
 
-const server = http.createServer((_req, res) => {
-  const html = fs.readFileSync('index.html', 'utf8');
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end(html);
+const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript' };
+
+const server = http.createServer((req, res) => {
+  const url = req.url === '/' ? '/index.html' : req.url;
+  const file = url.slice(1); // strip leading slash
+  try {
+    const content = fs.readFileSync(file, 'utf8');
+    const ext = path.extname(file);
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'text/plain' });
+    res.end(content);
+  } catch {
+    res.writeHead(404);
+    res.end('Not found');
+  }
 });
 
 server.listen(3000, () => console.log('Server ready on port 3000'));
@@ -102,8 +111,11 @@ server.listen(3000, () => console.log('Server ready on port 3000'));
   },
   'index.html': {
     file: {
-      contents: `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script></head><body class="flex h-screen items-center justify-center bg-gray-50"><p class="text-gray-400 text-lg">Enter a prompt to build your page...</p></body></html>`,
+      contents: `<!DOCTYPE html><html><head><link rel="stylesheet" href="/tailwind.css"></head><body class="flex h-screen items-center justify-center bg-gray-50"><p class="text-gray-400 text-lg">Enter a prompt to build your page...</p></body></html>`,
     },
+  },
+  'tailwind.css': {
+    file: { contents: '' }, // populated during boot
   },
 };
 
@@ -134,6 +146,8 @@ export default function BuilderPreview() {
         wcRef.current = wc;
 
         setStatus('Mounting file system...');
+        const twCss = await fetch('/tailwind.css').then((r) => r.text());
+        WC_FILES['tailwind.css'].file.contents = twCss;
         await wc.mount(WC_FILES);
 
         setStatus('Starting preview server...');

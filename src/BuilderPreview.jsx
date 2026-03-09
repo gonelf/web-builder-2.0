@@ -118,6 +118,7 @@ export default function BuilderPreview() {
   const [status, setStatus] = useState('Booting WebContainer...');
   const [blueprint, setBlueprint] = useState(null); // { toon, ids }
   const [error, setError] = useState('');
+  const [previewKey, setPreviewKey] = useState(0);
   const wcRef = useRef(null);
 
   // ── Boot the WebContainer on mount ──────────────────────────────────────
@@ -191,8 +192,9 @@ export default function BuilderPreview() {
       setStatus('Stitching components...');
       const finalHtml = stitchHtml(ids);
 
-      // 4. Hot-write to WebContainer (Vite will auto-reload the iframe)
+      // 4. Hot-write to WebContainer then force iframe reload
       await wcRef.current.fs.writeFile('/index.html', finalHtml);
+      setPreviewKey(k => k + 1);
       setStatus(`Built with ${ids.length} components`);
     } catch (err) {
       console.error('[Build]', err);
@@ -290,6 +292,7 @@ export default function BuilderPreview() {
         )}
         {iframeUrl && (
           <iframe
+            key={previewKey}
             src={iframeUrl}
             title="Live Preview"
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
